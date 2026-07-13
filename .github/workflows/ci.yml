@@ -16,13 +16,13 @@ jobs:
       - name: Checkout tpt-keystone-db (sibling)
         uses: actions/checkout@v4
         with:
-          repository: REPLACE_ME/tpt-keystone-db
+          repository: tpt-solutions/tpt-keystone-db
           path: tpt-keystone-db
 
       - name: Checkout tpt-appfront (sibling)
         uses: actions/checkout@v4
         with:
-          repository: REPLACE_ME/tpt-appfront
+          repository: tpt-solutions/tpt-appfront
           path: tpt-appfront
 
       - name: Set up Rust
