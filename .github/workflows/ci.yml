@@ -16,13 +16,13 @@ jobs:
       - name: Checkout tpt-keystone-db (sibling)
         uses: actions/checkout@v4
         with:
-          repository: REPLACE_ME/tpt-keystone-db
+          repository: tpt-solutions/tpt-keystone-db
           path: tpt-keystone-db
 
       - name: Checkout tpt-appfront (sibling)
         uses: actions/checkout@v4
         with:
-          repository: REPLACE_ME/tpt-appfront
+          repository: tpt-solutions/tpt-appfront
           path: tpt-appfront
 
       - name: Set up Rust
@@ -38,7 +38,20 @@ jobs:
 
       - name: fmt
         working-directory: tpt-ignis
-        run: cargo fmt --all -- --check
+        # `--all` sweeps in local path dependencies regardless of workspace
+        # membership (a longstanding rustfmt behavior), which would reach into
+        # the sibling tpt-keystone-db/tpt-appfront checkouts. List our own
+        # packages explicitly instead.
+        run: |
+          cargo fmt --check \
+            -p tpt-plasma-schemas \
+            -p tpt-physics-math \
+            -p tpt-ui-components \
+            -p tpt-fluxstream \
+            -p tpt-halo \
+            -p tpt-aether \
+            -p tpt-oracle \
+            -p udf-fft
 
       - name: clippy
         working-directory: tpt-ignis
