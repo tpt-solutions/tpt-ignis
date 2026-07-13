@@ -1,0 +1,20 @@
+[package]
+name = "udf-fft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# Builds both as a host lib (so `cargo build --workspace` stays green) and as
+# a wasm32 module for registration in tpt-keystone-db via
+# `CREATE FUNCTION ... LANGUAGE wasm AS '<base64>'`.
+[lib]
+name = "udf_fft"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+rustfft = { workspace = true }
+num-complex = { workspace = true }
+
+[dev-dependencies]
+tpt-fluxstream = { path = "../apps/tpt-fluxstream" }

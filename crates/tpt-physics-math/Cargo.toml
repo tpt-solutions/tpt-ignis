@@ -1,0 +1,10 @@
+[package]
+name = "tpt-physics-math"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tpt-plasma-schemas = { path = "../tpt-plasma-schemas" }
+ndarray = { workspace = true }
+num-complex = { workspace = true }

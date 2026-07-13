@@ -1,0 +1,44 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/tpt-plasma-schemas",
+    "crates/tpt-physics-math",
+    "crates/tpt-ui-components",
+    "apps/tpt-fluxstream",
+    "apps/tpt-halo",
+    "apps/tpt-aether",
+    "apps/tpt-oracle",
+    "udf-fft",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/REPLACE_ME/tpt-ignis"
+rust-version = "1.90"
+
+[workspace.dependencies]
+# Internal (sibling repos, checked out as siblings in CI — see .github/workflows/ci.yml)
+tpt-sdk = { path = "../tpt-keystone-db/tpt-sdk", default-features = false, features = ["keystone"] }
+appfront-core = { path = "../tpt-appfront/crates/appfront-core", default-features = false }
+appfront-ai-schema = { path = "../tpt-appfront/crates/appfront-ai-schema", default-features = false }
+
+# External
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rmp-serde = "1"
+rustfft = "6"
+ndarray = "0.15"
+num-complex = "0.4"
+thiserror = "1"
+rand = "0.8"
+rand_distr = "0.4"
+anyhow = "1"
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"

@@ -1,0 +1,25 @@
+# Rust
+/target/
+**/target/
+Cargo.lock
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts / logs
+*.log
+
+# Keystone runtime data (local object-store emulation, NVMe cache, WAL/indexes)
+**/tpt-data/
+**/tpt-data-*/
+
+# Generated UDF wasm artifacts
+**/*.wasm
+
+# Python
+__pycache__/
+*.pyc

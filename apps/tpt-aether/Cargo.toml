@@ -1,0 +1,11 @@
+[package]
+name = "tpt-aether"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tpt-plasma-schemas = { path = "../../crates/tpt-plasma-schemas" }
+tpt-sdk = { workspace = true }
+
+[dev-dependencies]

@@ -1,0 +1,121 @@
+TPT Ignis Suite: Comprehensive Software Design Document for Fusion Development
+1. Executive Summary
+The TPT Ignis Suite is a unified, high-performance software platform designed to accelerate nuclear fusion research and commercialization. Built entirely in Rust and structured as a monorepo, the suite leverages the existing TPT foundational tools (tpt-keystone-db and tpt-appfront) to solve the critical software bottlenecks in fusion: massive telemetry data ingestion, real-time multi-platform visualization, complex system topology modeling, and AI-driven disruption prediction.
+2. Architectural Philosophy
+Monorepo First: A single Cargo workspace ensures atomic refactoring, shared compilation caches (target/), and strict dependency versioning.
+Composable Foundation: The suite is built on top of tpt-keystone-db (multi-model database) and tpt-appfront (cross-platform UI/Canvas framework).
+Physics-Agnostic Core, Domain-Specific Apps: The foundation handles the heavy lifting of data storage and rendering, while the application layer handles the specific physics schemas (IMAS standards, MHD equations).
+Zero-Copy & High Performance: Leveraging Rust's memory safety and zero-cost abstractions to handle terabytes of high-frequency time-series data and real-time 3D rendering without garbage collection pauses.
+3. Repository Structure (Cargo Workspace)
+The project is organized as a Rust monorepo.
+tpt-ignis/
+├── Cargo.toml                 # Workspace root & shared dependency definitions
+├── rust-toolchain.toml        # Pins the Rust toolchain version
+├── .github/workflows/         # CI/CD pipelines (cargo-nextest, rust-cache)
+├── README.md
+│
+├── foundation/                # Existing core TPT infrastructure
+│   ├── tpt-keystone-db/       # Multi-model DB (Time-series, Graph, Vector, etc.)
+│   └── tpt-appfront/          # Cross-platform UI (Native, WASM Canvas, TUI)
+│
+├── crates/                    # Shared internal libraries
+│   ├── tpt-plasma-schemas/    # Data models (IMAS standards, diagnostic structs)
+│   ├── tpt-physics-math/      # Math libraries (ndarray wrappers, MHD solvers)
+│   └── tpt-ui-components/     # Shared egui/ratatui widgets (e.g., Plasma Gauges)
+│
+└── apps/                      # The TPT Ignis Application Binaries
+    ├── tpt-fluxstream/        # Plasma Data Engine & Ingestion
+    ├── tpt-halo/              # Universal Visualization & Control Client
+    ├── tpt-aether/            # Digital Twin & Reactor Topology Graph
+    └── tpt-oracle/            # AI Disruption Prediction & MCP Agent Server
+Root Cargo.toml Configuration
+[workspace]
+resolver = "2"
+members = [
+    "foundation/tpt-keystone-db",
+    "foundation/tpt-appfront",
+    "crates/tpt-plasma-schemas",
+    "crates/tpt-physics-math",
+    "crates/tpt-ui-components",
+    "apps/tpt-fluxstream",
+    "apps/tpt-halo",
+    "apps/tpt-aether",
+    "apps/tpt-oracle",
+]
+
+[workspace.dependencies]
+tokio = { version = "1.38", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+wgpu = "0.20"
+egui = "0.27"
+ratatui = "0.26"
+ndarray = "0.15"
+4. Shared Libraries (crates/)
+These crates contain domain-specific logic shared across multiple applications to prevent duplication.
+4.1 tpt-plasma-schemas
+Purpose: Defines the strict data structures for fusion diagnostics and machine states.
+Contents: Rust structs mapped to the IMAS (ITER Integrated Modeling & Analysis Suite) data dictionary. Includes serialization traits for Postgres/Keystone ingestion and JSON/MessagePack for UI rendering.
+4.2 tpt-physics-math
+Purpose: Core mathematical operations required across the suite.
+Contents: Wrappers around ndarray and nalgebra. Includes functions for calculating magnetic flux surfaces, plasma beta, Larmor radii, and coordinate transformations (cylindrical to toroidal).
+4.3 tpt-ui-components
+Purpose: Reusable UI widgets built on tpt-appfront.
+Contents: Custom egui widgets for 2D/3D plasma cross-sections, specialized time-series charting for diagnostic shots, and ratatui terminal gauges for cryogenic and magnet statuses.
+5. Application Specifications (apps/)
+5.1 tpt-fluxstream (The Plasma Data Engine)
+Base Tech: tpt-keystone-db (Time-Series & Event-Streaming engines)
+Purpose: Ingests, stores, and processes terabytes of high-frequency diagnostic data from fusion experiments.
+Key Features:
+Postgres Wire Protocol: Allows physicists to use standard SQL tools, Python pandas, and Jupyter notebooks to query the data.
+WASM UDFs (User Defined Functions): Compiles Rust signal-processing math (e.g., FFTs for instability detection) to WebAssembly, executing directly inside the database engine to eliminate network I/O bottlenecks.
+Automated Tiering: Keeps the current experimental campaign in hot memory, automatically archiving historical "shots" to S3-compatible object storage.
+5.2 tpt-halo (Universal Visualization & Control)
+Base Tech: tpt-appfront (Native Shell, WASM Canvas, Terminal UI)
+Purpose: Provides a unified, cross-platform interface for monitoring and controlling the reactor.
+Key Features:
+Multi-Target Rendering: Write the UI logic once in Rust.
+Control Room: Native OS-webview shell (using egui+taffy) for ultra-low latency, high-refresh-rate 3D magnetic field rendering.
+Remote Scientists: Deployed as a WASM canvas in the browser for interactive 3D manipulation.
+Floor Engineers: Deployed via ratatui for high-performance terminal dashboards over SSH.
+Real-time Telemetry: Sub-millisecond updates from tpt-fluxstream to visualize live plasma shape and position.
+5.3 tpt-aether (The Digital Twin & Reactor Graph)
+Base Tech: tpt-keystone-db (Graph, Geospatial, & Document engines)
+Purpose: Models the physical and logical topology of the entire reactor facility.
+Key Features:
+Dependency Graphing: Maps physical connections. Query: "If Coolant Pump A fails, trace the graph to identify which HTS magnet segments will overheat."
+Geospatial Neutron Mapping: Visualizes 14.1 MeV neutron flux and thermal load distributions mapped directly onto the 3D CAD geometry of the vacuum vessel.
+Component Lifecycle: Tracks maintenance logs, material degradation, and configuration states for every physical part of the machine.
+5.4 tpt-oracle (AI Disruption Prediction & Agent Interface)
+Base Tech: tpt-keystone-db (Vector/AI & MCP Server) + tpt-appfront (JSON-LD)
+Purpose: Provides predictive analytics and an API for external AI agents to interact with the reactor state.
+Key Features:
+Vector Similarity Search: Converts real-time plasma sensor telemetry into vector embeddings. Compares the live state against thousands of historical disruptions to predict collapses milliseconds before they occur.
+MCP Server (Model Context Protocol): Exposes the reactor's digital twin (tpt-aether) and live telemetry (tpt-fluxstream) via an MCP server.
+AI Agent Integration: Allows external LLMs or reinforcement learning agents to read the reactor state via JSON-LD schemas, analyze past shots, and automatically generate control sequences for the next experiment.
+6. System Data Flow & Integration
+The applications are designed to work seamlessly together via the tpt-keystone-db foundation:
+Ingestion: Diagnostics feed raw data into tpt-fluxstream.
+Storage & Processing: tpt-fluxstream writes time-series data to tpt-keystone-db, executing WASM UDFs for real-time signal processing.
+Visualization: tpt-halo subscribes to the processed time-series streams via tpt-appfront to render real-time 3D plasma shapes in the control room and browsers.
+Context & Topology: tpt-aether queries the Graph and Geospatial engines in tpt-keystone-db to overlay the live plasma data onto the physical 3D model of the reactor.
+Prediction & Automation: tpt-oracle reads the live state from tpt-fluxstream, queries historical vectors, and uses the MCP server to allow AI agents to adjust parameters for the next shot.
+7. Development & CI/CD Strategy
+To maintain velocity in a Rust monorepo of this scale, the following tooling is mandated:
+Testing: Use cargo-nextest for parallelized, fast test execution across the workspace.
+Caching: Implement Swatinem/rust-cache in GitHub Actions to cache the shared target/ directory, reducing CI build times from minutes to seconds.
+Linting & Formatting: Enforce strict cargo clippy and cargo fmt checks in CI. Use cargo-deny to monitor dependencies for security vulnerabilities and license compliance.
+Workspace Inheritance: All external dependencies must be defined in the root Cargo.toml under [workspace.dependencies] and inherited via dep.workspace = true to prevent version fragmentation.
+8. Implementation Roadmap
+Phase 1: Foundation & Data Ingestion (Months 1-2)
+Initialize the Cargo workspace and configure CI/CD.
+Implement tpt-plasma-schemas with basic IMAS diagnostic structs.
+Build tpt-fluxstream: Create an ingestion pipeline that reads open-source fusion data (e.g., MAST-U or ITER open data) and streams it into tpt-keystone-db via the Postgres wire protocol.
+Phase 2: Physics Math & Visualization (Months 3-4)
+Develop tpt-physics-math to calculate basic magnetic flux surfaces.
+Build tpt-halo: Create the tpt-appfront native and WASM targets. Implement basic 3D rendering of a tokamak torus using wgpu and connect it to the live data stream from tpt-fluxstream.
+Phase 3: Digital Twin & Topology (Months 5-6)
+Implement tpt-aether: Utilize the Graph and Geospatial engines of tpt-keystone-db to map a mock reactor's physical components and cooling loops.
+Integrate tpt-halo to overlay live thermal data onto the tpt-aether geospatial model.
+Phase 4: AI & Agent Integration (Months 7-8)
+Build tpt-oracle: Implement the Vector engine integration in tpt-keystone-db for historical state matching.
+Expose the system via the MCP server and JSON-LD schemas, allowing a basic LLM agent to query the current plasma state and suggest parameter adjustments.

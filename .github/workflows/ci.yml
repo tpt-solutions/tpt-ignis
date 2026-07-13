@@ -1,0 +1,59 @@
+name: ci
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tpt-ignis
+        uses: actions/checkout@v4
+        with:
+          path: tpt-ignis
+
+      - name: Checkout tpt-keystone-db (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: REPLACE_ME/tpt-keystone-db
+          path: tpt-keystone-db
+
+      - name: Checkout tpt-appfront (sibling)
+        uses: actions/checkout@v4
+        with:
+          repository: REPLACE_ME/tpt-appfront
+          path: tpt-appfront
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.90.0
+          components: rustfmt, clippy
+
+      - name: Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tpt-ignis
+
+      - name: fmt
+        working-directory: tpt-ignis
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        working-directory: tpt-ignis
+        run: cargo clippy --workspace --all-targets
+
+      - name: build
+        working-directory: tpt-ignis
+        run: cargo build --workspace
+
+      - name: test
+        working-directory: tpt-ignis
+        run: cargo nextest run --workspace
+        continue-on-error: true
+
+      - name: deny
+        working-directory: tpt-ignis
+        run: cargo deny check
+        continue-on-error: true
