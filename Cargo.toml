@@ -10,6 +10,13 @@ members = [
     "apps/tpt-oracle",
     "udf-fft",
 ]
+# tpt-sdk/appfront-core/appfront-ai-schema have no [workspace] of their own,
+# so without this Cargo implicitly folds their sibling repos into ours
+# (fmt/clippy/build --workspace would then reach into repos we don't own).
+exclude = [
+    "../tpt-keystone-db",
+    "../tpt-appfront",
+]
 
 [workspace.package]
 version = "0.1.0"
