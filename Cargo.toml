@@ -22,7 +22,7 @@ exclude = [
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/REPLACE_ME/tpt-ignis"
+repository = "https://github.com/tpt-solutions/tpt-ignis"
 rust-version = "1.90"
 
 [workspace.dependencies]
