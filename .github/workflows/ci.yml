@@ -44,6 +44,8 @@ jobs:
         # packages explicitly instead.
         run: |
           cargo fmt --check \
+            -p appfront-core \
+            -p appfront-ai-schema \
             -p tpt-plasma-schemas \
             -p tpt-physics-math \
             -p tpt-ui-components \

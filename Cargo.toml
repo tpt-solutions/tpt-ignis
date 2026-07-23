@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/appfront-core",
+    "crates/appfront-ai-schema",
     "crates/tpt-plasma-schemas",
     "crates/tpt-physics-math",
     "crates/tpt-ui-components",
@@ -26,10 +28,11 @@ repository = "https://github.com/tpt-solutions/tpt-ignis"
 rust-version = "1.90"
 
 [workspace.dependencies]
-# Internal (sibling repos, checked out as siblings in CI — see .github/workflows/ci.yml)
+# Internal (tpt-sdk still lives in the tpt-keystone-db sibling repo; appfront-*
+# are local stubs until tpt-appfront ships those crates — see crates/appfront-*)
 tpt-sdk = { path = "../tpt-keystone-db/tpt-sdk", default-features = false, features = ["keystone"] }
-appfront-core = { path = "../tpt-appfront/crates/appfront-core", default-features = false }
-appfront-ai-schema = { path = "../tpt-appfront/crates/appfront-ai-schema", default-features = false }
+appfront-core = { path = "crates/appfront-core" }
+appfront-ai-schema = { path = "crates/appfront-ai-schema" }
 
 # External
 tokio = { version = "1", features = ["full"] }
