@@ -36,6 +36,28 @@ jobs:
         with:
           workspaces: tpt-ignis
 
+      # cargo metadata (invoked by cargo fmt/clippy/build) must be able to
+      # resolve every path dependency declared in the workspace Cargo.toml,
+      # even if only a subset of packages are being formatted.  The sibling
+      # checkouts above provide the real crates for build/clippy/test; this
+      # step creates minimal stubs at the same paths so that metadata
+      # resolution succeeds even when a sibling checkout is empty or the
+      # crate lives in a sub-directory the checkout step hasn't populated.
+      - name: Stub missing sibling path deps
+        run: |
+          stub() {
+            local dir="$1" name="$2" extra="$3"
+            if [ ! -f "$dir/Cargo.toml" ]; then
+              mkdir -p "$dir/src"
+              printf '[package]\nname = "%s"\nversion = "0.1.0"\nedition = "2021"\n%s' \
+                "$name" "$extra" > "$dir/Cargo.toml"
+              touch "$dir/src/lib.rs"
+            fi
+          }
+          stub tpt-keystone-db/tpt-sdk            tpt-sdk            $'\n[features]\nkeystone = []\n'
+          stub tpt-appfront/crates/tpt-appfront-core          tpt-appfront-core          ""
+          stub tpt-appfront/crates/tpt-appfront-ai-schema     tpt-appfront-ai-schema     ""
+
       - name: fmt
         working-directory: tpt-ignis
         # `--all` sweeps in local path dependencies regardless of workspace

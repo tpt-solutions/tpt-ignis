@@ -1,8 +1,8 @@
 # TPT Ignis Suite
 
 A Rust Cargo workspace of fusion-development applications built on
-[`tpt-keystone-db`](https://github.com/REPLACE_ME/tpt-keystone-db) and
-[`tpt-appfront`](https://github.com/REPLACE_ME/tpt-appfront).
+[`tpt-keystone-db`](https://github.com/tpt-solutions/tpt-keystone-db) and
+[`tpt-appfront`](https://github.com/tpt-solutions/tpt-appfront).
 
 See [`spec.txt`](spec.txt) for the full design document and the implementation
 roadmap. [`todo.md`](todo.md) tracks the work.
