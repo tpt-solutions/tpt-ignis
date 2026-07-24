@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/appfront-core",
-    "crates/appfront-ai-schema",
     "crates/tpt-plasma-schemas",
     "crates/tpt-physics-math",
     "crates/tpt-ui-components",
@@ -12,9 +10,9 @@ members = [
     "apps/tpt-oracle",
     "udf-fft",
 ]
-# tpt-sdk/appfront-core/appfront-ai-schema have no [workspace] of their own,
-# so without this Cargo implicitly folds their sibling repos into ours
-# (fmt/clippy/build --workspace would then reach into repos we don't own).
+# The sibling repos have no [workspace] of their own, so without this Cargo
+# implicitly folds them into ours (fmt/clippy/build --workspace would then
+# reach into repos we don't own).
 exclude = [
     "../tpt-keystone-db",
     "../tpt-appfront",
@@ -28,11 +26,10 @@ repository = "https://github.com/tpt-solutions/tpt-ignis"
 rust-version = "1.90"
 
 [workspace.dependencies]
-# Internal (tpt-sdk still lives in the tpt-keystone-db sibling repo; appfront-*
-# are local stubs until tpt-appfront ships those crates — see crates/appfront-*)
+# Internal (sibling repos, checked out as siblings in CI — see .github/workflows/ci.yml)
 tpt-sdk = { path = "../tpt-keystone-db/tpt-sdk", default-features = false, features = ["keystone"] }
-appfront-core = { path = "crates/appfront-core" }
-appfront-ai-schema = { path = "crates/appfront-ai-schema" }
+tpt-appfront-core = { path = "../tpt-appfront/crates/tpt-appfront-core" }
+tpt-appfront-ai-schema = { path = "../tpt-appfront/crates/tpt-appfront-ai-schema" }
 
 # External
 tokio = { version = "1", features = ["full"] }
