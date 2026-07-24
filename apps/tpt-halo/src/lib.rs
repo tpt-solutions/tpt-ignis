@@ -7,7 +7,7 @@
 //! [`LiveState`] and are drawn as ASCII poloidal/toroidal projections plus
 //! gauge widgets from [`tpt_ui_components`].
 
-use appfront_core::UITree;
+use tpt_appfront_core::UITree;
 use tpt_physics_math::equilibrium::TokamakEquilibrium;
 use tpt_ui_components::{gauge_widget, toroidal_field_gauge, PlasmaGauge};
 
@@ -188,9 +188,9 @@ pub fn render_ui(eq: &TokamakEquilibrium, state: &LiveState) -> UITree<()> {
 pub fn render_html(eq: &TokamakEquilibrium, state: &LiveState) -> String {
     let mut ui = render_ui(eq, state);
     ui.assign_ids();
-    let agent_state = appfront_core::agent::query_state(&ui);
-    let report = appfront_core::devtools::render(&ui, &agent_state);
-    appfront_core::devtools::to_html(&report)
+    let agent_state = tpt_appfront_core::query_state(&ui);
+    let report = tpt_appfront_core::render(&ui, &agent_state);
+    tpt_appfront_core::to_html(&report)
 }
 
 #[cfg(test)]

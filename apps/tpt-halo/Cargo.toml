@@ -8,7 +8,7 @@ license.workspace = true
 tpt-plasma-schemas = { path = "../../crates/tpt-plasma-schemas" }
 tpt-physics-math = { path = "../../crates/tpt-physics-math" }
 tpt-ui-components = { path = "../../crates/tpt-ui-components" }
-appfront-core = { workspace = true }
+tpt-appfront-core = { workspace = true }
 
 [dev-dependencies]
 tpt-aether = { path = "../tpt-aether" }

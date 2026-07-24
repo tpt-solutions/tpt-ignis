@@ -12,8 +12,8 @@
 //!    `suggest_parameters` tools, letting an agent read state and propose
 //!    control adjustments for the next shot.
 
-use appfront_ai_schema;
 use serde_json::json;
+use tpt_appfront_ai_schema;
 use tpt_fluxstream::detection::InstabilityReport;
 use tpt_ui_components::gauge_widget;
 
@@ -100,8 +100,8 @@ pub fn nearest_by_embedding<'a>(
 }
 
 /// Build a `UITree` describing the current plasma state (used for JSON-LD).
-pub fn plasma_state_tree(report: &InstabilityReport) -> appfront_core::UITree<()> {
-    appfront_core::UITree::container(|c| {
+pub fn plasma_state_tree(report: &InstabilityReport) -> tpt_appfront_core::UITree<()> {
+    tpt_appfront_core::UITree::container(|c| {
         c.heading(1, format!("Plasma state — shot #{}", report.shot));
         c.with(gauge_widget(
             "Instability Score",
@@ -117,7 +117,7 @@ pub fn plasma_state_tree(report: &InstabilityReport) -> appfront_core::UITree<()
 
 /// Expose the live plasma state as JSON-LD via `appfront-ai-schema`.
 pub fn to_json_ld(report: &InstabilityReport) -> serde_json::Value {
-    appfront_ai_schema::to_json_ld(&plasma_state_tree(report))
+    tpt_appfront_ai_schema::to_json_ld(&plasma_state_tree(report))
 }
 
 /// Shared oracle state exposed over MCP / vector matching.

@@ -1,4 +1,4 @@
-//! Reusable UI widgets for the TPT Ignis suite, built on `appfront-core`'s
+//! Reusable UI widgets for the TPT Ignis suite, built on `tpt-appfront-core`'s
 //! target-agnostic `UITree` AST (renders to HTML/WASM/canvas via the
 //! appfront backends, and to a devtools/`to_html` snippet for offline tests).
 //!
@@ -6,9 +6,9 @@
 //! real *widget* builders that emit `UITree`s: a radial [`PlasmaGauge`] view
 //! and an ASCII time-series [`diagnostic_chart`] for diagnostic shots — both
 //! carry AI metadata so an external agent can read plasma state (see
-//! `appfront-ai-schema`).
+//! `tpt-appfront-ai-schema`).
 
-use appfront_core::UITree;
+use tpt_appfront_core::UITree;
 
 /// Visual state of a single radial gauge.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -159,9 +159,9 @@ pub fn chart_samples(title: &str, samples: &[(f64, f64)]) -> UITree<()> {
 pub fn to_html(ui: &UITree<()>) -> String {
     let mut ui = ui.clone();
     ui.assign_ids();
-    let state = appfront_core::agent::query_state(&ui);
-    let report = appfront_core::devtools::render(&ui, &state);
-    appfront_core::devtools::to_html(&report)
+    let state = tpt_appfront_core::query_state(&ui);
+    let report = tpt_appfront_core::render(&ui, &state);
+    tpt_appfront_core::to_html(&report)
 }
 
 #[cfg(test)]

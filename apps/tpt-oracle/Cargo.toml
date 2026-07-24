@@ -8,8 +8,8 @@ license.workspace = true
 tpt-fluxstream = { path = "../../apps/tpt-fluxstream" }
 tpt-plasma-schemas = { path = "../../crates/tpt-plasma-schemas" }
 tpt-ui-components = { path = "../../crates/tpt-ui-components" }
-appfront-core = { workspace = true }
-appfront-ai-schema = { workspace = true }
+tpt-appfront-core = { workspace = true }
+tpt-appfront-ai-schema = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
