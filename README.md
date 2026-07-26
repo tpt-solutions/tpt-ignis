@@ -54,5 +54,9 @@ cargo deny check
 - **Phase 1** (Foundation & ingestion): workspace initialized; `tpt-plasma-schemas`,
   `tpt-physics-math`, and `tpt-fluxstream` (synthetic generator + native FFT
   oracle + ingestion) implemented with passing unit tests.
-- **Phase 2-4**: application crates scaffolded as compiling stubs; real
-  implementations tracked in `todo.md`.
+- **Phase 2-4**: `tpt-halo`, `tpt-aether`, `tpt-oracle`, `tpt-ui-components`,
+  and `tpt-physics-math`'s equilibrium model are implemented with passing unit
+  tests (not stubs — see `todo.md` for the detailed breakdown per crate).
+- **Phase 5** (adoption hardening): in progress, tracked in `todo.md` — the
+  `mastu-loader` real open-data feature, a couple of security fixes found in
+  review, CI hardening, and onboarding tooling (`justfile`, `CONTRIBUTING.md`).

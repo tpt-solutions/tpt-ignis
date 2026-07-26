@@ -55,6 +55,17 @@ Derived from `spec.txt` and the approved implementation plan. Phase 0 is prerequ
 - [x] `tpt-oracle`: real vector embeddings (`embed` + `cosine_similarity` + `nearest_by_embedding`, the same math as Prism) for historical-state matching, beyond the Phase-1 Euclidean stub
 - [x] Expose the system via an MCP server (`McpServer`, JSON-RPC 2.0 over stdio) with `query_plasma_state` / `suggest_parameters` tools, and JSON-LD (`to_json_ld` via `appfront-ai-schema`), letting an LLM agent query plasma state and suggest parameter adjustments
 
+## Phase 5: Adoption Hardening (2026-07-24 review)
+
+Follow-ups from a full project review (stub audit, security audit, adoption tooling). None of Phase 1-4's own code was found to contain literal stubs/TODOs — this phase is genuinely new work identified by that review.
+
+- [ ] `mastu.rs`: implement the real MAST-U/ITER open-data loader as the `mastu-loader` feature on `tpt-fluxstream` (fixture-tested parsing, `#[ignore]`d live-fetch test, CLI wiring)
+- [ ] Security: fix `udf-fft::detect_instability`/`alloc` OOB-read and 32-bit integer-overflow bounds bypass (`checked_add`, regression test)
+- [ ] Security: fix `tpt-aether::dependents_via_db` SQL injection (validate/escape `start` before interpolating into the recursive-CTE string; note upstream `tpt-sdk` parameterized-query follow-up)
+- [ ] CI: remove `continue-on-error: true` from the `test` and `deny` steps in `.github/workflows/ci.yml` (currently masking real regressions and security-advisory failures); add a `cargo build --target wasm32-unknown-unknown -p udf-fft` step so the actual deploy target is compiled in CI
+- [ ] Onboarding: add root `justfile` (`setup`, `doctor`, `build`, `test`, `fmt`, `clippy`, `deny`, `wasm-build`, `check`, `demo`), `CONTRIBUTING.md`, and a README "Quickstart" section
+- [ ] README: correct the "Phase 2-4 scaffolded as compiling stubs" line — Phases 1-4 are implemented with passing unit tests; only Phase 0 (sibling repo) and the optional `mastu-loader` (this phase) are open
+
 ---
 
 ## Known limitations carried forward from spec.txt (tracked, not blocking)

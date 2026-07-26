@@ -31,13 +31,21 @@ static mut HEAP_OFFSET: usize = 0;
 pub extern "C" fn alloc(len: i32) -> i32 {
     let len = len.max(0) as usize;
     // Align to 8 bytes (f64) so we never produce a misaligned pointer.
-    let aligned = (len + 7) & !7;
+    // Use checked arithmetic throughout: on wasm32 `usize` is 32-bit, so an
+    // attacker- or bug-supplied `len` near `i32::MAX` could otherwise wrap
+    // `off + aligned` around and bypass the `> HEAP_SIZE` bounds check.
+    let Some(aligned) = len.checked_add(7).map(|v| v & !7) else {
+        return 0;
+    };
     unsafe {
         let off = HEAP_OFFSET;
-        if off + aligned > HEAP_SIZE {
+        let Some(new_off) = off.checked_add(aligned) else {
+            return 0;
+        };
+        if new_off > HEAP_SIZE {
             return 0; // signal allocation failure
         }
-        HEAP_OFFSET = off + aligned;
+        HEAP_OFFSET = new_off;
         HEAP.as_ptr().add(off) as i32
     }
 }
