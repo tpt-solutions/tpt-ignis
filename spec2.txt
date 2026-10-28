@@ -1,0 +1,680 @@
+The Proposal: tpt-ignis-equilibrium
+What It Does
+A pure-Rust, formally verified toolkit for analytical tokamak equilibrium design that:
+Takes analytical plasma shape parameters (elongation, triangularity, 
+q
+q-profile) as input
+Computes the required vacuum magnetic field analytically using Solov'ev or Cerfon-Freidberg solutions
+Solves for the exact coil currents via direct linear inversion (not optimization)
+Formally verifies topological constraints (nested flux surfaces, stability criteria)
+Optionally uses tpt-opt-nls to optimize secondary objectives (coil stress, manufacturing complexity)
+Why This Is the Right Starting Point
+1. It's the foundation everything else builds on
+Every fusion simulation needs an equilibrium. If you have a fast, analytical equilibrium solver, you can use it for:
+Real-time plasma control (replacing slow numerical solvers)
+Rapid design space exploration (thousands of configurations per second)
+Training data for ML models
+Verification of full MHD codes
+2. It demonstrates the elegant approach
+By showing that you can design a tokamak with a direct analytical solve instead of brute-force optimization, you prove the concept and set the standard for the rest of the ecosystem.
+3. It leverages your existing stack perfectly
+tpt-math: Analytical solutions, linear algebra for the coil inversion
+tpt-opt-nls: Only used for secondary objectives (optional)
+tpt-formal: Hard guarantees on topological constraints
+tpt-ignis: Plasma-specific schemas and diagnostics
+4. It's implementable by a solo maintainer
+The core algorithms are well-documented in the fusion literature. You're not inventing new math—you're implementing known analytical solutions with modern software engineering rigor.
+The Architecture
+
+tpt-ignis-equilibrium/
+├── src/
+│   ├── lib.rs
+│   ├── analytical/
+│   │   ├── solovev.rs          # Solov'ev equilibrium solutions
+│   │   ├── cerfon_freidberg.rs # More general analytical solutions
+│   │   └── shapes.rs           # Parameterized plasma boundary shapes
+│   ├── inverse/
+│   │   ├── vacuum_field.rs     # Compute required vacuum field at boundary
+│   │   └── coil_currents.rs    # Linear superposition to solve for currents
+│   ├── topology/
+│   │   ├── flux_surfaces.rs    # Verify nested flux surfaces (no islands)
+│   │   ├── safety_factor.rs    # Compute and verify q-profile
+│   │   └── stability.rs        # Check magnetic well, shear constraints
+│   ├── optimize/
+│   │   └── secondary.rs        # Optional: optimize coil stress/complexity via tpt-opt-nls
+│   └── io/
+│       ├── input.rs            # Parse analytical parameters
+│       └── output.rs           # Export equilibrium, coil geometry, field maps
+├── examples/
+│   ├── iter_like.rs            # Design an ITER-like equilibrium
+│   └── compact_torus.rs        # Design a compact spherical tokamak
+└── tests/
+    ├── analytical_accuracy.rs  # Compare against known benchmarks
+    └── topology_guarantees.rs  # Verify formal constraints
+
+The Core Algorithms
+1. Analytical Equilibrium (Solov'ev Solution)
+The Grad-Shafranov equation for axisymmetric equilibria:
+Δ
+∗
+ψ
+=
+−
+μ
+0
+R
+2
+p
+′
+(
+ψ
+)
+−
+F
+F
+′
+(
+ψ
+)
+Δ 
+∗
+ ψ=−μ 
+0
+​
+ R 
+2
+ p 
+′
+ (ψ)−FF 
+′
+ (ψ)
+For Solov'ev, assume 
+p
+′
+(
+ψ
+)
+=
+c
+1
+p 
+′
+ (ψ)=c 
+1
+​
+  and 
+F
+F
+′
+(
+ψ
+)
+=
+c
+2
+FF 
+′
+ (ψ)=c 
+2
+​
+  (constants). This gives a closed-form solution:
+ψ
+(
+R
+,
+Z
+)
+=
+analytical function of 
+(
+R
+,
+Z
+,
+κ
+,
+δ
+,
+ϵ
+)
+ψ(R,Z)=analytical function of (R,Z,κ,δ,ϵ)
+where 
+κ
+κ = elongation, 
+δ
+δ = triangularity, 
+ϵ
+ϵ = inverse aspect ratio.
+Implementation: Pure Rust function in tpt-math, returning 
+ψ
+(
+R
+,
+Z
+)
+ψ(R,Z) on a grid.
+2. Inverse Coil Current Computation
+The vacuum field from 
+N
+N coils at position 
+(
+R
+i
+,
+Z
+i
+)
+(R 
+i
+​
+ ,Z 
+i
+​
+ ) with current 
+I
+i
+I 
+i
+​
+ :
+ψ
+v
+a
+c
+(
+R
+,
+Z
+)
+=
+∑
+i
+=
+1
+N
+I
+i
+⋅
+G
+(
+R
+,
+Z
+;
+R
+i
+,
+Z
+i
+)
+ψ 
+vac
+​
+ (R,Z)=∑ 
+i=1
+N
+​
+ I 
+i
+​
+ ⋅G(R,Z;R 
+i
+​
+ ,Z 
+i
+​
+ )
+where 
+G
+G is the Green's function for a current loop.
+At the plasma boundary, we require:
+ψ
+v
+a
+c
+(
+R
+b
+,
+Z
+b
+)
+=
+ψ
+p
+l
+a
+s
+m
+a
+(
+R
+b
+,
+Z
+b
+)
+−
+ψ
+i
+n
+t
+e
+r
+n
+a
+l
+(
+R
+b
+,
+Z
+b
+)
+ψ 
+vac
+​
+ (R 
+b
+​
+ ,Z 
+b
+​
+ )=ψ 
+plasma
+​
+ (R 
+b
+​
+ ,Z 
+b
+​
+ )−ψ 
+internal
+​
+ (R 
+b
+​
+ ,Z 
+b
+​
+ )
+This is a linear system: 
+G
+⋅
+I
+=
+ψ
+t
+a
+r
+g
+e
+t
+G⋅I=ψ 
+target
+​
+ 
+Solve for 
+I
+I using tpt-math-linalg (least-squares if overdetermined).
+Implementation: Build the Green's function matrix, solve the linear system. No iteration, no optimization.
+3. Topological Verification
+Nested flux surfaces: Trace field lines from the magnetic axis outward. Verify they form closed, nested contours.
+Safety factor 
+q
+q: Compute 
+q
+(
+ψ
+)
+=
+1
+2
+π
+∮
+B
+⋅
+∇
+ϕ
+B
+⋅
+∇
+ψ
+d
+l
+q(ψ)= 
+2π
+1
+​
+ ∮ 
+B⋅∇ψ
+B⋅∇ϕ
+​
+ dl. Verify it's monotonic (or has desired profile).
+Magnetic well: Verify 
+d
+V
+d
+ψ
+>
+0
+dψ
+dV
+​
+ >0 (stability criterion).
+Implementation: Use tpt-formal to encode these as invariants. If violated, return Err(TopologyViolation).
+The MVP Scope (2-Week Build)
+Week 1: Core Analytical Solver
+Implement Solov'ev equilibrium (parameterized by 
+κ
+,
+δ
+,
+ϵ
+κ,δ,ϵ)
+Compute 
+ψ
+(
+R
+,
+Z
+)
+ψ(R,Z) on a 2D grid
+Verify against published ITER-like equilibrium benchmarks
+Week 2: Inverse Coil Solve
+Implement Green's function for circular current loops
+Build the linear system for coil currents
+Solve for currents that produce the target plasma boundary
+Verify the solution reproduces the target shape to high accuracy
+Optional Week 3: Topology & Optimization
+Add flux surface tracing and 
+q
+q-profile computation
+Add formal invariant checks
+Integrate tpt-opt-nls to minimize coil complexity (optional)
+Why This Breaks Open Science
+Speed: Analytical solutions are 1000x faster than numerical Grad-Shafranov solvers. You can explore the entire design space in minutes, not days.
+Guarantees: Formal verification ensures every equilibrium satisfies physical constraints by construction. No more "hope the optimizer didn't create magnetic islands."
+Differentiability: The analytical solutions are smooth functions of the shape parameters. This means you can compute exact gradients for design optimization, enabling inverse design of the plasma shape itself.
+Reproducibility: Pure Rust, no external dependencies, deterministic. Every researcher gets the exact same answer.
+
+
+
+Expansion Design Spec
+Comprehensive Plasma Research & Applied Physics Platform
+1. Vision & Philosophy
+Current State: tpt-ignis provides equilibrium design, diagnostic ingestion, and disruption prediction.
+Target State: A complete, formally verified, differentiable plasma physics platform that spans from core transport to edge physics, with real-time control capabilities and seamless experimental integration.
+Design Philosophy:
+Analytical first: Use closed-form solutions where possible (like the equilibrium approach)
+Composable physics: Each module is independent but interoperable
+Formal guarantees: Every physical constraint is verified, not just hoped for
+Differentiable by default: Every simulation can compute exact gradients for optimization
+Experimental-ready: Direct integration with real diagnostic data and control systems
+2. Physics Domain Expansion
+2.1 Core Transport (tpt-ignis-transport)
+Problem: Predict how heat, particles, and momentum move through the plasma. This determines confinement time and fusion performance.
+Current Approaches:
+Brute-force: Solve coupled PDEs on fine grids (slow, unstable)
+Empirical: Use scaling laws from past experiments (inaccurate for new devices)
+Elegant Approach:
+Analytical transport models: Implement closed-form solutions for common profiles (e.g., Gaussian, parabolic)
+Reduced models: Use 1.5D transport (radial only, flux-surface averaged) instead of full 3D
+Neural ODEs: Train differentiable surrogate models on high-fidelity data, then use them for real-time prediction
+Formal bounds: Guarantee positivity (density > 0, temperature > 0) and conservation laws
+Architecture:
+pub trait TransportModel {
+    type Profile; // Temperature, density, current density profiles
+    type Sources; // Heating, fueling, current drive sources
+    
+    // Forward: predict profiles given sources and boundary conditions
+    fn evolve(&self, initial: &Self::Profile, sources: &Self::Sources, dt: f64) 
+        -> Result<Self::Profile, TransportError>;
+    
+    // Inverse: find sources needed to achieve target profiles
+    fn invert(&self, target: &Self::Profile) -> Result<Self::Sources, TransportError>;
+    
+    // Differentiable: compute gradients for optimization
+    fn jacobian(&self, profile: &Self::Profile) -> SparseMatrix;
+}
+
+Integration: Uses tpt-sci-ode for time integration, tpt-opt-nls for inverse problems, tpt-formal for positivity guarantees.
+2.2 MHD Stability Analysis (tpt-ignis-stability)
+Problem: Determine if a plasma equilibrium is stable to various instabilities (kink, ballooning, tearing modes).
+Current Approaches:
+Brute-force: Solve eigenvalue problems on fine grids (computationally expensive)
+Conservative: Use simple stability criteria (overly restrictive)
+Elegant Approach:
+Analytical stability boundaries: For common configurations, derive closed-form stability limits (e.g., Troyon beta limit, Mercier criterion)
+Reduced MHD: Use simplified models that capture essential physics without full complexity
+Topological methods: Analyze magnetic field line structure to predict tearing mode stability
+Probabilistic stability: Instead of binary stable/unstable, compute probability of stability given uncertainties
+Architecture:
+
+pub enum StabilityMode {
+    IdealKink,      // External kink instability
+    Ballooning,     // Pressure-driven interchange
+    Tearing,        // Resistive magnetic island growth
+    Neoclassical,   // Neoclassical tearing modes
+}
+
+pub struct StabilityResult {
+    pub mode: StabilityMode,
+    pub growth_rate: f64, // Positive = unstable, negative = stable
+    pub threshold: f64,   // Critical value (e.g., beta limit)
+    pub confidence: f64,  // Probability of stability given uncertainties
+}
+
+pub trait StabilityAnalyzer {
+    fn analyze(&self, equilibrium: &Equilibrium) -> Vec<StabilityResult>;
+    
+    // Differentiable: compute how stability changes with shape parameters
+    fn sensitivity(&self, equilibrium: &Equilibrium) -> HashMap<ShapeParameter, f64>;
+}
+
+Integration: Uses tpt-math for eigenvalue solvers, tpt-opt-robust for uncertainty quantification.
+2.3 Heating & Current Drive (tpt-ignis-heating)
+Problem: Model how external power (RF waves, neutral beams) deposits energy and drives current in the plasma.
+Current Approaches:
+Brute-force: Full-wave electromagnetic simulations (extremely expensive)
+Ray tracing: Follow wave packets through plasma (approximate, misses wave effects)
+Elegant Approach:
+Analytical deposition profiles: For common heating schemes, use closed-form deposition functions (e.g., Gaussian for ECRH, broad for NBI)
+Quasilinear theory: Use simplified wave-particle interaction models
+Adjoint methods: Compute deposition profiles efficiently using adjoint equations
+Real-time models: Train fast surrogate models for control applications
+Architecture:
+
+pub enum HeatingScheme {
+    ECRH { frequency: f64, power: f64, launch_angle: f64 },
+    ICRH { frequency: f64, power: f64, antenna_position: f64 },
+    NBI { energy: f64, power: f64, injection_angle: f64 },
+    LHCD { frequency: f64, power: f64, n_parallel: f64 },
+}
+
+pub struct DepositionProfile {
+    pub power_density: Vec<f64>,      // W/m^3 on flux surfaces
+    pub current_density: Vec<f64>,    // A/m^2 on flux surfaces (for CD)
+    pub efficiency: f64,              // fraction of input power absorbed
+}
+
+pub trait HeatingModel {
+    fn deposit(&self, scheme: &HeatingScheme, equilibrium: &Equilibrium) 
+        -> Result<DepositionProfile, HeatingError>;
+    
+    // Optimize: find heating scheme that achieves target profile
+    fn optimize(&self, target: &DepositionProfile, equilibrium: &Equilibrium) 
+        -> Result<HeatingScheme, HeatingError>;
+}
+
+Integration: Uses tpt-opt-nls for optimization, tpt-formal for power balance constraints.
+2.4 Edge & Scrape-Off Layer Physics (tpt-ignis-edge)
+Problem: Model the plasma boundary region where confined plasma meets material walls. Critical for divertor design and heat load management.
+Current Approaches:
+Brute-force: 2D fluid simulations (expensive, complex boundary conditions)
+Empirical: Use scaling laws (inaccurate for new geometries)
+Elegant Approach:
+1D SOL models: Use simplified 1D models along field lines (fast, captures essential physics)
+Two-point model: Analytical solution for upstream/downstream conditions
+Detachment criteria: Analytically predict when divertor detaches (reduces heat load)
+Formal heat flux limits: Guarantee peak heat flux stays below material limits
+Architecture:
+
+pub struct SOLProfile {
+    pub temperature_upstream: f64,
+    pub temperature_target: f64,
+    pub density_upstream: f64,
+    pub density_target: f64,
+    pub heat_flux_peak: f64, // MW/m^2
+}
+
+pub trait SOLModel {
+    fn solve(&self, core_profiles: &TransportProfile, geometry: &DivertorGeometry) 
+        -> Result<SOLProfile, SOLError>;
+    
+    // Detachment prediction
+    fn detachment_threshold(&self, geometry: &DivertorGeometry) -> f64;
+    
+    // Optimize: minimize peak heat flux while maintaining detachment
+    fn optimize(&self, target: &SOLProfile) -> Result<DivertorGeometry, SOLError>;
+}
+
+Integration: Uses tpt-fem for 2D extensions, tpt-opt-nls for optimization.
+2.5 Synthetic Diagnostics (tpt-ignis-diagnostics)
+Problem: Predict what real diagnostics (Thomson scattering, interferometry, ECE) would measure given a simulated plasma state. Critical for comparing simulations to experiments.
+Current Approaches:
+Brute-force: Full forward modeling of diagnostic physics (expensive)
+Simplified: Use basic formulas (misses important effects)
+Elegant Approach:
+Analytical response functions: For common diagnostics, derive closed-form measurement models
+Differentiable forward models: Every synthetic diagnostic is differentiable, enabling gradient-based comparison to real data
+Uncertainty propagation: Include diagnostic noise and calibration uncertainties
+Real-time synthetic data: Generate synthetic signals fast enough for real-time control
+Architecture:
+
+pub enum Diagnostic {
+    ThomsonScattering { positions: Vec<f64> },
+    Interferometry { chord_positions: Vec<(f64, f64)> },
+    ECE { frequencies: Vec<f64> },
+    Bolometry { detector_positions: Vec<f64> },
+}
+
+pub struct DiagnosticSignal {
+    pub values: Vec<f64>,
+    pub uncertainties: Vec<f64>,
+    pub response_matrix: SparseMatrix, // How plasma state maps to signal
+}
+
+pub trait SyntheticDiagnostic {
+    fn measure(&self, plasma_state: &PlasmaState, diagnostic: &Diagnostic) 
+        -> Result<DiagnosticSignal, DiagnosticError>;
+    
+    // Differentiable: compute how signal changes with plasma state
+    fn response_jacobian(&self, plasma_state: &PlasmaState, diagnostic: &Diagnostic) 
+        -> SparseMatrix;
+    
+    // Inverse: reconstruct plasma state from diagnostic signals
+    fn reconstruct(&self, signals: &[DiagnosticSignal]) 
+        -> Result<PlasmaState, DiagnosticError>;
+}
+
+Integration: Uses tpt-opt-nls for reconstruction, tpt-opt-robust for uncertainty.
+2.6 Real-Time Control (tpt-ignis-control)
+Problem: Control the plasma in real-time to maintain desired conditions and avoid disruptions.
+Current Approaches:
+PID control: Simple but limited
+Model predictive control (MPC): Powerful but computationally expensive
+Elegant Approach:
+Differentiable plasma models: Use the fast analytical models from above as the "plant" in MPC
+Formal safety constraints: Guarantee control actions never violate physical limits
+Adaptive control: Update model parameters in real-time using incoming diagnostic data
+Disruption avoidance: Use tpt-oracle predictions to proactively adjust control
+Architecture:
+
+pub struct ControlAction {
+    pub coil_currents: Vec<f64>,
+    pub heating_power: Vec<f64>,
+    pub fueling_rate: f64,
+}
+
+pub trait PlasmaController {
+    // Compute optimal control action given current state and target
+    fn compute_action(&self, current_state: &PlasmaState, target: &PlasmaState) 
+        -> Result<ControlAction, ControlError>;
+    
+    // Update model based on new measurements
+    fn update_model(&mut self, measurements: &[DiagnosticSignal]);
+    
+    // Predict future state given control action
+    fn predict(&self, current_state: &PlasmaState, action: &ControlAction, dt: f64) 
+        -> Result<PlasmaState, ControlError>;
+}
+
+Integration: Uses tpt-control for control algorithms, tpt-opt-nls for MPC optimization, tpt-formal for safety constraints.
+3. Integration Architecture
+3.1 Unified Data Model
+All modules share a common PlasmaState representation:
+
+pub struct PlasmaState {
+    pub equilibrium: Equilibrium,           // Magnetic geometry
+    pub transport: TransportProfile,        // Temperature, density, current profiles
+    pub stability: StabilityAnalysis,       // Stability margins
+    pub heating: HeatingDeposition,         // Power and current drive deposition
+    pub edge: SOLProfile,                   // Edge/SOL conditions
+    pub diagnostics: DiagnosticSignals,     // Synthetic diagnostic measurements
+}
+
+3.2 Composable Physics Pipeline
+
+[Equilibrium] → [Transport] → [Stability] → [Heating] → [Edge] → [Diagnostics]
+      ↑                                                              ↓
+      └────────────── [Control] ←────────────────────────────────────┘
+
+Each module is independent but can be chained together. The output of one module feeds into the next.
+3.3 Differentiable End-to-End
+Every module implements the DifferentiablePhysicsModel trait from tpt-opt-nls, enabling:
+Gradient-based optimization across the entire physics chain
+Inverse problems (e.g., "what heating profile achieves this temperature profile?")
+Sensitivity analysis (e.g., "how does stability change with elongation?")
+4. Experimental Integration
+4.1 Database Connectors
+MDSplus: Connect to experimental databases (DIII-D, JET, ITER)
+OMAS: Interoperability with existing fusion data structures
+IMAS: Full compatibility with ITER's data model
+4.2 Real-Time Interfaces
+EPICS: Connect to control system infrastructure
+CODAC: ITER's control and data access system
+Custom TCP/UDP: Direct integration with plasma control systems
+4.3 Validation Framework
+Benchmark suite: Compare against published experimental results
+Cross-code validation: Compare against established codes (ASTRA, TRANSP, CHEASE)
+Uncertainty quantification: Validate predictions with error bars
+5. Phased Roadmap
+Phase 1: Foundation (Months 1-3)
+Implement tpt-ignis-equilibrium (analytical Grad-Shafranov + inverse coil solve)
+Build unified PlasmaState data model
+Create basic transport solver (1.5D, analytical profiles)
+Integrate with existing tpt-ignis infrastructure
+Phase 2: Core Physics (Months 4-6)
+Add MHD stability analysis (analytical criteria + reduced models)
+Implement heating/current drive models (analytical deposition)
+Build synthetic diagnostics framework
+Validate against published benchmarks
+Phase 3: Edge & Control (Months 7-9)
+Add SOL/edge physics (1D models, detachment prediction)
+Implement real-time control system (MPC with formal constraints)
+Integrate with experimental databases (MDSplus, OMAS)
+Build validation framework
+Phase 4: Advanced Features (Months 10-12)
+Add uncertainty quantification throughout
+Implement neural ODE surrogates for real-time use
+Build comprehensive documentation and examples
+Release 1.0 with full test coverage
+6. Why This Breaks Open Plasma Science
+Speed: Analytical models are 100-1000x faster than traditional solvers, enabling real-time applications
+Guarantees: Formal verification ensures every simulation satisfies physical constraints
+Differentiability: Every module computes exact gradients, enabling optimization and inverse problems
+Composability: Modules are independent but interoperable, allowing researchers to mix and match
+Experimental Ready: Direct integration with real data and control systems
+Reproducible: Pure Rust, no external dependencies, deterministic results
